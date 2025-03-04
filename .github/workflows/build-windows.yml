@@ -7,32 +7,26 @@ on:
 
 jobs:
   build-windows-exe:
-    runs-on: windows-latest  # Tells GitHub we want a Windows runner
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
-        # This checks out your repository code on the runner
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
-        # We pick Python 3.9 as an example. 
-        # You can also set python-version: "3.11" if you prefer.
 
       - name: Install PyInstaller
         run: |
           pip install --upgrade pip
           pip install pyinstaller
-        # Installs PyInstaller in the Windows environment
 
       - name: Build EXE
         run: |
           pyinstaller --onefile main.py
-        # Adjust 'main.py' if your script is named differently
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows-exe
           path: dist
-        # This uploads the entire dist folder (containing your .exe) as an artifact
