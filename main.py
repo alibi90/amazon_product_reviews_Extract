@@ -4,24 +4,25 @@ import pandas as pd
 import time
 import sys
 
-def get_all_amazon_reviews(amazon_url):
+def get_all_amazon_reviews(asin):
     """
-    Scrapes ALL reviews from a single Amazon product reviews URL 
-    by following the 'Next page' links until no more pages are found.
+    Scrapes ALL reviews from a single ASIN on Amazon.com
+    by following 'Next page' links until no more pages are found.
     Returns a list of dictionaries, each containing one review.
     """
+    # Build the base URL for the product’s review page using the ASIN
+    current_page_url = f"https://www.amazon.com/product-reviews/{asin}/"
+
+    # Updated headers
     headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/108.0.0.0 Safari/537.36"
-        )
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
     }
 
     all_reviews = []
-    current_page_url = amazon_url
     page_number = 1
-    
+
     while True:
         print(f"Scraping page {page_number}...")
         response = requests.get(current_page_url, headers=headers)
@@ -86,14 +87,14 @@ def get_all_amazon_reviews(amazon_url):
     return all_reviews
 
 def main():
-    # Prompt user for the Amazon reviews URL
-    amazon_url = input("Please enter the Amazon reviews URL: ").strip()
-    if not amazon_url:
-        print("No URL provided. Exiting.")
+    # Prompt user for the ASIN
+    asin = input("Please enter the ASIN (e.g., B0C2CKT9VR): ").strip()
+    if not asin:
+        print("No ASIN provided. Exiting.")
         sys.exit(1)
 
-    # Get all reviews from the specified URL
-    all_reviews = get_all_amazon_reviews(amazon_url)
+    # Scrape reviews for the provided ASIN
+    all_reviews = get_all_amazon_reviews(asin)
     print(f"Total reviews scraped: {len(all_reviews)}")
 
     if len(all_reviews) == 0:
