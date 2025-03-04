@@ -7,13 +7,13 @@ import sys
 def get_all_amazon_reviews(asin):
     """
     Scrapes ALL reviews from a single ASIN on Amazon.com
-    by following 'Next page' links until no more pages are found.
+    by following the 'Next page' links until no more pages are found.
     Returns a list of dictionaries, each containing one review.
     """
-    # Build the base URL for the product’s review page using the ASIN
-    current_page_url = f"https://www.amazon.com/product-reviews/{asin}/"
+    # Start with a query string to ensure we get all reviews and the first page.
+    # Example: https://www.amazon.com/product-reviews/B0C2CKT9VR/?reviewerType=all_reviews&pageNumber=1
+    current_page_url = f"https://www.amazon.com/product-reviews/{asin}/?reviewerType=all_reviews&pageNumber=1"
 
-    # Updated headers
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
         "Accept-Language": "en-US,en;q=0.9",
@@ -26,6 +26,7 @@ def get_all_amazon_reviews(asin):
     while True:
         print(f"Scraping page {page_number}...")
         response = requests.get(current_page_url, headers=headers)
+
         if response.status_code != 200:
             print(f"Failed to retrieve page {page_number}. Status code: {response.status_code}")
             break
@@ -33,8 +34,11 @@ def get_all_amazon_reviews(asin):
         soup = BeautifulSoup(response.text, "html.parser")
         review_blocks = soup.find_all("div", {"data-hook": "review"})
 
-        # If there are no reviews on this page, we should stop
+        # Debugging tip: Uncomment the following line to see how many reviews are found each page:
+        # print(f"Found {len(review_blocks)} reviews on page {page_number}")
+
         if not review_blocks:
+            # If 0 reviews found on this page, assume no more reviews exist
             print("No more reviews found. Stopping.")
             break
 
@@ -72,13 +76,13 @@ def get_all_amazon_reviews(asin):
                 "text": review_text
             })
 
-        # Look for the next-page link
+        # Look for the next-page link with class "a-last"
         next_page_tag = soup.find("li", {"class": "a-last"})
         if next_page_tag and next_page_tag.find("a"):
             next_page_url = "https://www.amazon.com" + next_page_tag.find("a")["href"]
             current_page_url = next_page_url
             page_number += 1
-            # A short delay to help avoid potential rate-limiting
+            # Delay to help avoid potential rate-limiting
             time.sleep(2)
         else:
             print("No more pages found.")
