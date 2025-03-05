@@ -16,7 +16,7 @@ def get_amazon_reviews_selenium(asin):
 
     options = webdriver.ChromeOptions()
     # If you want to reuse your logged-in Chrome profile, uncomment & set your path:
-    options.add_argument(r"user-data-dir=C:\Users\Home-MSI\AppData\Local\Google\Chrome\User Data")
+    # options.add_argument(r"user-data-dir=C:\Users\Home-MSI\AppData\Local\Google\Chrome\User Data")
 
     driver = webdriver.Chrome(
         service=Service(ChromeDriverManager().install()),
@@ -31,8 +31,8 @@ def get_amazon_reviews_selenium(asin):
     driver.get(start_url)
 
     # Give yourself time to manually log in if needed
-    print("Waiting 15 seconds to log in or pass any captchas if needed...")
-    time.sleep(15)
+    print("Waiting 60 seconds to log in or pass any captchas if needed...")
+    time.sleep(60)
 
     all_reviews = []
     page_number = 1
@@ -107,7 +107,7 @@ def get_amazon_reviews_selenium(asin):
             next_page_link = driver.find_element(By.CSS_SELECTOR, "li.a-last a")
             next_page_link.click()
             page_number += 1
-            time.sleep(3)  # Pause to let the page load
+            time.sleep(15)  # Pause to let the page load
         except:
             print("No more pages found.")
             break
