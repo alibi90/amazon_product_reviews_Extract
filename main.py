@@ -35,7 +35,7 @@ def get_amazon_reviews_selenium(asin):
     # Give you time to log in if Amazon forces it, or to pass any captcha checks
     # This is purely optional. If you're already logged in via user-data-dir, it may not be necessary.
     print("Waiting 15 seconds so you can log in or handle any captchas (if needed)...")
-    time.sleep(15)
+    time.sleep(60)
 
     all_reviews = []
     page_number = 1
