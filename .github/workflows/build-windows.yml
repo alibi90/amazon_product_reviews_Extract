@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install requests beautifulsoup4 pandas openpyxl pyinstaller
+          pip install requests beautifulsoup4 pandas openpyxl pyinstaller selenium webdriver-manager
         # Installs all necessary libraries along with PyInstaller
 
       - name: Build EXE
