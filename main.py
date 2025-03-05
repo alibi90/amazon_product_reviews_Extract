@@ -1,115 +1,122 @@
-import requests
-from bs4 import BeautifulSoup
-import pandas as pd
 import time
-import sys
+import pandas as pd
 
-def get_all_amazon_reviews(asin):
-    """
-    Scrapes ALL reviews from a single ASIN on Amazon.com
-    by following the 'Next page' links until no more pages are found.
-    Returns a list of dictionaries, each containing one review.
-    """
-    # Start with a query string to ensure we get all reviews and the first page.
-    # Example: https://www.amazon.com/product-reviews/B0C2CKT9VR/?reviewerType=all_reviews&pageNumber=1
-    current_page_url = f"https://www.amazon.com/product-reviews/{asin}/?reviewerType=all_reviews&pageNumber=1"
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-    }
+def get_amazon_reviews_selenium(asin):
+    """
+    Opens Chrome, navigates to the Amazon review page for the given ASIN,
+    waits for manual login if necessary, then scrapes the loaded reviews.
+    Follows 'Next page' links until no more are found.
+    """
+
+    # 1) (Optional) Configure Chrome to reuse your local user profile 
+    # so you stay logged in automatically. 
+    # Set 'user-data-dir' to your actual path (the example below is Windows).
+    # WARNING: DO NOT share user-data-dir with multiple Chrome processes simultaneously!
+    # Make sure Chrome is closed before you run this so you don't corrupt your profile.
+    options = webdriver.ChromeOptions()
+    # options.add_argument(r"user-data-dir=C:\Users\<YourUserName>\AppData\Local\Google\Chrome\User Data")
+
+    # 2) Create a Chrome driver instance
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()),
+        options=options
+    )
+
+    # 3) Go to the Amazon reviews page for the given ASIN
+    # Add query parameters to ensure we get all_reviews & pageNumber=1
+    start_url = f"https://www.amazon.com/product-reviews/{asin}/?reviewerType=all_reviews&pageNumber=1"
+    driver.get(start_url)
+
+    # Give you time to log in if Amazon forces it, or to pass any captcha checks
+    # This is purely optional. If you're already logged in via user-data-dir, it may not be necessary.
+    print("Waiting 15 seconds so you can log in or handle any captchas (if needed)...")
+    time.sleep(15)
 
     all_reviews = []
     page_number = 1
 
     while True:
         print(f"Scraping page {page_number}...")
-        response = requests.get(current_page_url, headers=headers)
 
-        if response.status_code != 200:
-            print(f"Failed to retrieve page {page_number}. Status code: {response.status_code}")
-            break
-
-        soup = BeautifulSoup(response.text, "html.parser")
-        review_blocks = soup.find_all("div", {"data-hook": "review"})
-
-        # Debugging tip: Uncomment the following line to see how many reviews are found each page:
-        # print(f"Found {len(review_blocks)} reviews on page {page_number}")
-
+        # 4) Locate the review blocks in the rendered HTML
+        review_blocks = driver.find_elements(By.CSS_SELECTOR, 'div[data-hook="review"]')
+        
         if not review_blocks:
-            # If 0 reviews found on this page, assume no more reviews exist
-            print("No more reviews found. Stopping.")
+            print("No more reviews found or the page is not loaded. Stopping.")
             break
 
-        # Extract the review data from each block
+        # 5) Extract data from each review block
         for block in review_blocks:
-            # Review title
-            title_tag = block.find("a", {"data-hook": "review-title"})
-            review_title = title_tag.get_text(strip=True) if title_tag else None
+            try:
+                title = block.find_element(By.CSS_SELECTOR, '[data-hook="review-title"]').text
+            except:
+                title = None
 
-            # Rating (e.g., "5.0 out of 5 stars")
-            rating_tag = block.find("i", {"data-hook": "review-star-rating"})
-            if rating_tag and rating_tag.find("span"):
-                rating_str = rating_tag.find("span").get_text(strip=True)
-                review_rating = rating_str.split()[0]
-            else:
-                review_rating = None
+            try:
+                rating_full = block.find_element(By.CSS_SELECTOR, '[data-hook="review-star-rating"] span').text
+                # Usually "5.0 out of 5 stars"
+                rating = rating_full.split()[0]
+            except:
+                rating = None
 
-            # Author
-            author_tag = block.find("span", {"class": "a-profile-name"})
-            review_author = author_tag.get_text(strip=True) if author_tag else None
+            try:
+                author = block.find_element(By.CSS_SELECTOR, '.a-profile-name').text
+            except:
+                author = None
 
-            # Date
-            date_tag = block.find("span", {"data-hook": "review-date"})
-            review_date = date_tag.get_text(strip=True) if date_tag else None
+            try:
+                date = block.find_element(By.CSS_SELECTOR, '[data-hook="review-date"]').text
+            except:
+                date = None
 
-            # Review text
-            body_tag = block.find("span", {"data-hook": "review-body"})
-            review_text = body_tag.get_text(strip=True) if body_tag else None
+            try:
+                text = block.find_element(By.CSS_SELECTOR, '[data-hook="review-body"]').text
+            except:
+                text = None
 
             all_reviews.append({
-                "title": review_title,
-                "rating": review_rating,
-                "author": review_author,
-                "date": review_date,
-                "text": review_text
+                "title": title,
+                "rating": rating,
+                "author": author,
+                "date": date,
+                "text": text
             })
 
-        # Look for the next-page link with class "a-last"
-        next_page_tag = soup.find("li", {"class": "a-last"})
-        if next_page_tag and next_page_tag.find("a"):
-            next_page_url = "https://www.amazon.com" + next_page_tag.find("a")["href"]
-            current_page_url = next_page_url
+        # 6) Check if there's a Next page
+        try:
+            next_page = driver.find_element(By.CSS_SELECTOR, 'li.a-last a')
+            next_page.click()
             page_number += 1
-            # Delay to help avoid potential rate-limiting
-            time.sleep(2)
-        else:
+            time.sleep(3)  # short pause to let next page load
+        except:
             print("No more pages found.")
             break
+
+    # 7) Close the browser
+    driver.quit()
 
     return all_reviews
 
 def main():
-    # Prompt user for the ASIN
-    asin = input("Please enter the ASIN (e.g., B0C2CKT9VR): ").strip()
+    asin = input("Enter Amazon ASIN (e.g. B0C2CKT9VR): ").strip()
     if not asin:
         print("No ASIN provided. Exiting.")
-        sys.exit(1)
+        return
 
-    # Scrape reviews for the provided ASIN
-    all_reviews = get_all_amazon_reviews(asin)
-    print(f"Total reviews scraped: {len(all_reviews)}")
+    reviews = get_amazon_reviews_selenium(asin)
+    print(f"Total reviews scraped: {len(reviews)}")
 
-    if len(all_reviews) == 0:
-        print("No reviews scraped. Exiting.")
-        sys.exit(0)
-
-    # Save reviews to an Excel file
-    df = pd.DataFrame(all_reviews)
-    output_filename = "amazon_reviews.xlsx"
-    df.to_excel(output_filename, index=False)
-    print(f"Reviews have been saved to {output_filename}")
+    if reviews:
+        df = pd.DataFrame(reviews)
+        df.to_excel("amazon_reviews.xlsx", index=False)
+        print("Saved to amazon_reviews.xlsx")
+    else:
+        print("No reviews found.")
 
 if __name__ == "__main__":
     main()
