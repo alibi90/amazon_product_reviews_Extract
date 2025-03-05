@@ -16,7 +16,7 @@ def get_amazon_reviews_selenium(asin):
 
     options = webdriver.ChromeOptions()
     # If you want to reuse your logged-in Chrome profile, uncomment & set your path:
-    # options.add_argument(r"user-data-dir=C:\Users\<YourUser>\AppData\Local\Google\Chrome\User Data")
+    options.add_argument(r"user-data-dir=C:\Users\Home-MSI\AppData\Local\Google\Chrome\User Data")
 
     driver = webdriver.Chrome(
         service=Service(ChromeDriverManager().install()),
